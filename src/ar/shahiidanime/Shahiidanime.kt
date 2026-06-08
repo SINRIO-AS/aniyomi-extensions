@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.animeextension.ar.shahiidanime
 
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -38,7 +39,7 @@ class Shahiidanime : ParsedAnimeHttpSource() {
     override fun latestUpdatesNextPageSelector() = popularAnimeNextPageSelector()
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        if (query.isBlank()) return popularAnimeRequest(page)
+        if (query.isBlank()) return GET(archiveUrl(pathFromFilters(filters), page), headers)
         val q = query.trim().replace(" ", "+")
         val url = if (page == 1) "$baseUrl/?s=$q" else "$baseUrl/page/$page/?s=$q"
         return GET(url, headers)
@@ -46,6 +47,11 @@ class Shahiidanime : ParsedAnimeHttpSource() {
     override fun searchAnimeSelector() = popularAnimeSelector()
     override fun searchAnimeFromElement(element: Element) = animeFromElement(element)
     override fun searchAnimeNextPageSelector() = popularAnimeNextPageSelector()
+
+    override fun getFilterList() = AnimeFilterList(
+        ListingFilter(),
+        AnimeFilter.Header("ملاحظة: الفلاتر تعمل عند البحث الفارغ أو من صفحة التصفح"),
+    )
 
     override fun animeDetailsParse(document: Document): SAnime = SAnime.create().apply {
         title = document.selectFirst("h1")?.text()?.trim().orEmpty()
@@ -92,17 +98,35 @@ class Shahiidanime : ParsedAnimeHttpSource() {
                 "dood" -> "https://dood.yt/e/$frame"
                 else -> "https://share4max.com/iframe/$frame"
             }
-            Hoster(hosterUrl = url, hosterName = name, videoList = listOf(Video(url, name, url, headers)))
+            Hoster(hosterUrl = url, hosterName = name)
+        }.toMutableList()
+
+        document.selectFirst("a[href*='download=']")?.absUrl("href")?.takeIf { it.isNotBlank() }?.let {
+            hosters.add(Hoster(hosterUrl = it, hosterName = "تحميل الحلقة"))
         }
+
         if (hosters.isNotEmpty()) return hosters
         val iframe = document.selectFirst("iframe[src]")?.absUrl("src") ?: return emptyList()
-        return listOf(Hoster(hosterUrl = iframe, hosterName = "Embed", videoList = listOf(Video(iframe, "Embed", iframe, headers))))
+        return listOf(Hoster(hosterUrl = iframe, hosterName = "Embed"))
     }
 
     override fun videoListParse(response: Response, hoster: Hoster): List<Video> {
-        hoster.videoList?.let { return it }
-        val url = response.request.url.toString()
-        return listOf(Video(url, hoster.hosterName.ifBlank { "Embed" }, url, headers))
+        val finalUrl = response.request.url.toString()
+        val quality = hoster.hosterName.ifBlank { "Embed" }
+        val contentType = response.header("Content-Type").orEmpty()
+
+        if (contentType.contains("video") || finalUrl.contains(".mp4") || finalUrl.contains(".m3u8")) {
+            return listOf(Video(finalUrl, quality, finalUrl, headers))
+        }
+
+        val body = response.body.string()
+        val directUrl = extractDirectVideoUrl(body)
+            ?: body.substringAfter("<iframe", "")
+                .let { Regex("src=[\"']([^\"']+)[\"']").find(it)?.groupValues?.get(1) }
+                ?.cleanVideoUrl()
+            ?: finalUrl
+
+        return listOf(Video(finalUrl, quality, directUrl, headers))
     }
 
     override fun videoUrlParse(response: Response): String = response.request.url.toString()
@@ -119,7 +143,44 @@ class Shahiidanime : ParsedAnimeHttpSource() {
 
     private fun archiveUrl(path: String, page: Int) = if (page == 1) "$baseUrl/$path/" else "$baseUrl/$path/page/$page/"
 
+    private fun pathFromFilters(filters: AnimeFilterList): String {
+        return when (filters.filterIsInstance<ListingFilter>().firstOrNull()?.state ?: 1) {
+            0 -> "episodes"
+            2 -> "anime"
+            3 -> "seriesDubbed"
+            else -> "series"
+        }
+    }
+
+    private fun extractDirectVideoUrl(body: String): String? {
+        val cleaned = body.replace("\\/", "/").replace("&amp;", "&")
+        val patterns = listOf(
+            Regex("""(?:file|source|src)\s*[:=]\s*[\"']([^\"']+(?:m3u8|mp4)[^\"']*)[\"']""", RegexOption.IGNORE_CASE),
+            Regex("""https?://[^\"'\s<>]+(?:\.m3u8|\.mp4)(?:\?[^\"'\s<>]*)?""", RegexOption.IGNORE_CASE),
+        )
+        for (pattern in patterns) {
+            val match = pattern.find(cleaned) ?: continue
+            val url = (match.groups.getOrNull(1)?.value ?: match.value).cleanVideoUrl()
+            if (url.isNotBlank()) return url
+        }
+        return null
+    }
+
+    private fun String.cleanVideoUrl(): String {
+        return trim()
+            .removeSurrounding("\"")
+            .removeSurrounding("'")
+            .replace("\\/", "/")
+            .replace("&amp;", "&")
+            .let { if (it.startsWith("//")) "https:$it" else it }
+    }
+
     private fun parseDate(date: String?): Long = runCatching {
         if (date.isNullOrBlank()) 0L else dateFormat.parse(date)?.time ?: 0L
     }.getOrDefault(0L)
+
+    private class ListingFilter : AnimeFilter.Select<String>(
+        "القسم",
+        arrayOf("آخر الحلقات", "قائمة الأنمي", "أفلام الأنمي", "مدبلج"),
+    )
 }
