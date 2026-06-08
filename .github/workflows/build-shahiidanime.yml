@@ -1,0 +1,38 @@
+name: Build Shahiid Anime Extension
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'src/ar/shahiidanime/**'
+      - '.github/workflows/build-shahiidanime.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      CI_CHUNK_SIZE: '1'
+      CI_CHUNK_NUM: '0'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Grant execute permission to Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build Shahiid Anime extension
+        run: ./gradlew :src:ar:shahiidanime:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shahiidanime-apk
+          path: src/ar/shahiidanime/build/outputs/apk/debug/*.apk
