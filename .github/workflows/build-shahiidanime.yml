@@ -11,8 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      CI: 'true'
-      CI_CHUNK_SIZE: '1'
+      CI_CHUNK_SIZE: '9999'
       CI_CHUNK_NUM: '0'
     steps:
       - name: Checkout repository
