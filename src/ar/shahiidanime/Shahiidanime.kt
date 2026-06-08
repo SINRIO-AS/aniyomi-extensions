@@ -49,8 +49,9 @@ class Shahiidanime : ParsedAnimeHttpSource() {
     override fun searchAnimeNextPageSelector() = popularAnimeNextPageSelector()
 
     override fun getFilterList() = AnimeFilterList(
+        ListingSort(),
         ListingFilter(),
-        AnimeFilter.Header("ملاحظة: الفلاتر تعمل عند البحث الفارغ أو من صفحة التصفح"),
+        AnimeFilter.Header("اختر القسم ثم اضغط بحث بدون كتابة نص"),
     )
 
     override fun animeDetailsParse(document: Document): SAnime = SAnime.create().apply {
@@ -144,7 +145,10 @@ class Shahiidanime : ParsedAnimeHttpSource() {
     private fun archiveUrl(path: String, page: Int) = if (page == 1) "$baseUrl/$path/" else "$baseUrl/$path/page/$page/"
 
     private fun pathFromFilters(filters: AnimeFilterList): String {
-        return when (filters.filterIsInstance<ListingFilter>().firstOrNull()?.state ?: 1) {
+        val selected = filters.filterIsInstance<ListingSort>().firstOrNull()?.state?.index
+            ?: filters.filterIsInstance<ListingFilter>().firstOrNull()?.state
+            ?: 1
+        return when (selected) {
             0 -> "episodes"
             2 -> "anime"
             3 -> "seriesDubbed"
@@ -178,6 +182,12 @@ class Shahiidanime : ParsedAnimeHttpSource() {
     private fun parseDate(date: String?): Long = runCatching {
         if (date.isNullOrBlank()) 0L else dateFormat.parse(date)?.time ?: 0L
     }.getOrDefault(0L)
+
+    private class ListingSort : AnimeFilter.Sort(
+        "ترتيب حسب القسم",
+        arrayOf("آخر الحلقات", "قائمة الأنمي", "أفلام الأنمي", "مدبلج"),
+        Selection(1, false),
+    )
 
     private class ListingFilter : AnimeFilter.Select<String>(
         "القسم",
