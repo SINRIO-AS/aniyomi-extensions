@@ -64,6 +64,15 @@ class HentaiRisto : AnimeHttpSource() {
         return GET(url, headers)
     }
 
+    override fun popularAnimeParse(response: Response): AnimesPage =
+        animePageFromDocument(response.asJsoup(), pageFromUrl(response.request.url.toString()))
+
+    override fun latestUpdatesParse(response: Response): AnimesPage =
+        animePageFromDocument(response.asJsoup(), pageFromUrl(response.request.url.toString()))
+
+    override fun searchAnimeParse(response: Response): AnimesPage =
+        animePageFromDocument(response.asJsoup(), pageFromUrl(response.request.url.toString()))
+
     override suspend fun getAnimeDetails(anime: SAnime): SAnime {
         val document = fetchDocument(absoluteUrl(anime.url))
 
@@ -168,14 +177,19 @@ class HentaiRisto : AnimeHttpSource() {
             .sortedByDescending { it.quality.contains("1080") }
     }
 
-    private fun parseAnimePage(request: Request, page: Int): AnimesPage {
-        val document = executeRequest(request)
+    private fun parseAnimePage(request: Request, page: Int): AnimesPage =
+        animePageFromDocument(executeRequest(request), page)
+
+    private fun animePageFromDocument(document: Document, page: Int): AnimesPage {
         val animeList = document.select(".MovieItem")
             .mapNotNull(::animeFromElement)
             .distinctBy { it.url }
 
         return AnimesPage(animeList, document.hasNextPage(page))
     }
+
+    private fun pageFromUrl(url: String): Int =
+        PAGE_NUMBER_REGEX.find(url)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
 
     private fun animeFromElement(element: Element): SAnime? {
         val anchor = element.selectFirst("a[href]") ?: return null
@@ -265,5 +279,6 @@ class HentaiRisto : AnimeHttpSource() {
         )
         val BACKGROUND_IMAGE_REGEX = Regex("""url\(['"]?([^'")]+)""")
         val DIRECT_MEDIA_REGEX = Regex("""\.(?:m3u8|mp4)(?:[?#].*)?$""", RegexOption.IGNORE_CASE)
+        val PAGE_NUMBER_REGEX = Regex("""(?:/page/|[?&](?:offset|paged)=)(\d+)""")
     }
 }
