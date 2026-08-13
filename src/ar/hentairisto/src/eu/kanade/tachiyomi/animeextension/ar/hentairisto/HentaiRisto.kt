@@ -225,4 +225,3 @@ class HentaiRisto : AnimeHttpSource() {
         val DIRECT_MEDIA_REGEX = Regex("""\.(?:m3u8|mp4)(?:[?#].*)?$""", RegexOption.IGNORE_CASE)
     }
 }
-A
