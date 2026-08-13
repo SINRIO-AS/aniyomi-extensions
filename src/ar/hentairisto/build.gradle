@@ -1,0 +1,34 @@
+ext {
+  
+    extName = 'Hentai Risto'
+  
+    extClass = '.HentaiRisto'
+  
+    extVersionCode = 1
+  
+    isNsfw = true
+  
+}
+
+
+
+apply from: "$rootDir/common.gradle"
+
+
+
+dependencies {
+  
+    implementation(project(':lib:voe-extractor'))
+  
+    implementation(project(':lib:streamtape-extractor'))
+  
+}
+
+
+
+
+
+
+
+
+
