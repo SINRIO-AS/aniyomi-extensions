@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.animeextension.ar.hentairisto
 
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -49,20 +50,44 @@ class HentaiRisto : AnimeHttpSource() {
         page: Int,
         query: String,
         filters: AnimeFilterList,
-    ): AnimesPage {
-        if (query.isBlank()) return getPopularAnime(page)
-
-        return parseAnimePage(searchAnimeRequest(page, query, filters), page)
-    }
+    ): AnimesPage = parseAnimePage(searchAnimeRequest(page, query, filters), page)
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        val path = if (page == 1) "$baseUrl/" else "$baseUrl/page/$page/"
-        val url = path.toHttpUrl().newBuilder()
-            .addQueryParameter("s", query)
-            .build()
+        if (query.isNotBlank()) {
+            val path = if (page == 1) "$baseUrl/" else "$baseUrl/page/$page/"
+            val url = path.toHttpUrl().newBuilder()
+                .addQueryParameter("s", query)
+                .build()
+            return GET(url, headers)
+        }
+
+        val category = filters.filterIsInstance<CategoryFilter>().firstOrNull()?.state ?: 0
+        val quality = filters.filterIsInstance<QualityFilter>().firstOrNull()?.state ?: 0
+        val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.state ?: 0
+        if (category == 0 && quality == 0 && genre == 0) return popularAnimeRequest(page)
+
+        val url = "$baseUrl/filtering/".toHttpUrl().newBuilder().apply {
+            CATEGORY_VALUES.getOrNull(category)?.takeIf(String::isNotBlank)?.let {
+                addQueryParameter("category", it)
+            }
+            QUALITY_VALUES.getOrNull(quality)?.takeIf(String::isNotBlank)?.let {
+                addQueryParameter("quality", it)
+            }
+            GENRE_VALUES.getOrNull(genre)?.takeIf(String::isNotBlank)?.let {
+                addQueryParameter("genre", it)
+            }
+            if (page > 1) addQueryParameter("page", page.toString())
+        }.build()
 
         return GET(url, headers)
     }
+
+    override fun getFilterList() = AnimeFilterList(
+        AnimeFilter.Header("اختر التصفية ثم اضغط بحث بدون كتابة نص"),
+        CategoryFilter(),
+        QualityFilter(),
+        GenreFilter(),
+    )
 
     override fun popularAnimeParse(response: Response): AnimesPage =
         animePageFromDocument(response.asJsoup(), pageFromUrl(response.request.url.toString()))
@@ -268,9 +293,37 @@ class HentaiRisto : AnimeHttpSource() {
             val href = anchor.attr("href")
             href.contains("/page/$nextPage/") ||
                 href.contains("offset=$nextPage") ||
-                href.contains("paged=$nextPage")
+                href.contains("paged=$nextPage") ||
+                href.contains("page=$nextPage")
         }
     }
+
+    private class CategoryFilter : AnimeFilter.Select<String>(
+        "التصنيف",
+        arrayOf("الكل", "مسلسلات هنتاي"),
+    )
+
+    private class QualityFilter : AnimeFilter.Select<String>(
+        "الجودة",
+        arrayOf("الكل", "1080p", "720p", "720"),
+    )
+
+    private class GenreFilter : AnimeFilter.Select<String>(
+        "النوع",
+        arrayOf(
+            "الكل",
+            "NTR",
+            "إلف",
+            "بدون حجب",
+            "حريم",
+            "خيال",
+            "خيانة",
+            "رومانسي",
+            "فانتازيا",
+            "كوميدي",
+            "ميلف",
+        ),
+    )
 
     private companion object {
         val EPISODE_NUMBER_REGEX = Regex(
@@ -279,6 +332,9 @@ class HentaiRisto : AnimeHttpSource() {
         )
         val BACKGROUND_IMAGE_REGEX = Regex("""url\(['"]?([^'")]+)""")
         val DIRECT_MEDIA_REGEX = Regex("""\.(?:m3u8|mp4)(?:[?#].*)?$""", RegexOption.IGNORE_CASE)
-        val PAGE_NUMBER_REGEX = Regex("""(?:/page/|[?&](?:offset|paged)=)(\d+)""")
+        val PAGE_NUMBER_REGEX = Regex("""(?:/page/|[?&](?:offset|paged|page)=(\d+))""")
+        val CATEGORY_VALUES = arrayOf("", "1")
+        val QUALITY_VALUES = arrayOf("", "7", "32", "491")
+        val GENRE_VALUES = arrayOf("", "2000", "50", "186", "167", "56", "68", "210", "61", "618", "133")
     }
 }
