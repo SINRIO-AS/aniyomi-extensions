@@ -129,6 +129,26 @@ class HentaiRisto : AnimeHttpSource() {
         return episodes.sortedBy { it.episode_number }
     }
 
+    override fun episodeListParse(response: Response): List<SEpisode> {
+        val episodes = response.asJsoup()
+            .select(".EpisodesList a[href]")
+            .mapIndexed { index, element ->
+                val name = element.text().trim().ifBlank { "Episode ${index + 1}" }
+                SEpisode.create().apply {
+                    this.name = name
+                    url = relativeUrl(element.absUrl("href"))
+                    episode_number = EPISODE_NUMBER_REGEX.find(name)
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toFloatOrNull()
+                        ?: (index + 1).toFloat()
+                    date_upload = 0L
+                }
+            }
+
+        return episodes.sortedBy { it.episode_number }
+    }
+
     override suspend fun getVideoList(episode: SEpisode): List<Video> {
         val watchUrl = absoluteUrl(episode.url).trimEnd('/') + "/watch"
         val document = fetchDocument(watchUrl)
