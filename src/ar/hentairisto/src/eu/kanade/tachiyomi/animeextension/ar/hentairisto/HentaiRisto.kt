@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
+import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.IOException
@@ -87,6 +88,27 @@ class HentaiRisto : AnimeHttpSource() {
         }
     }
 
+    override fun animeDetailsParse(response: Response): SAnime {
+        val document = response.asJsoup()
+
+        return SAnime.create().apply {
+            title = document.selectFirst("h1.PostTitle, h1")?.text()?.trim().orEmpty()
+            thumbnail_url = document.coverUrl()
+            description = document.descriptionText()
+            genre = document.select("a[href*='/genre/']")
+                .map(Element::text)
+                .filter(String::isNotBlank)
+                .distinct()
+                .joinToString(", ")
+            status = if (document.select("a[href*='/complated-series/']").isNotEmpty()) {
+                SAnime.COMPLETED
+            } else {
+                SAnime.UNKNOWN
+            }
+            initialized = true
+        }
+    }
+
     override suspend fun getEpisodeList(anime: SAnime): List<SEpisode> {
         val episodes = fetchDocument(absoluteUrl(anime.url))
             .select(".EpisodesList a[href]")
@@ -121,9 +143,9 @@ class HentaiRisto : AnimeHttpSource() {
         }
 
         return videos
-            .filter { it.videoUrl.isNotBlank() }
+            .filter { !it.videoUrl.isNullOrBlank() }
             .distinctBy { it.videoUrl }
-            .sortedByDescending { it.videoTitle.contains("1080") }
+            .sortedByDescending { it.quality.contains("1080") }
     }
 
     private fun parseAnimePage(request: Request, page: Int): AnimesPage {
@@ -166,7 +188,7 @@ class HentaiRisto : AnimeHttpSource() {
                     StreamTapeExtractor(client).videosFromUrl(hostUrl)
                 }
                 DIRECT_MEDIA_REGEX.containsMatchIn(hostUrl) -> {
-                    listOf(Video(videoUrl = hostUrl, videoTitle = "Direct"))
+                    listOf(Video(url = hostUrl, quality = "Direct", videoUrl = hostUrl))
                 }
                 else -> emptyList()
             }
