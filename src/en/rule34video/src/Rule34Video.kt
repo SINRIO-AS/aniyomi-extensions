@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.ParsedAnimeHttpSource
 import eu.kanade.tachiyomi.network.GET
-import eu.kanade.tachiyomi.network.asJsoup
+import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.Response
@@ -120,7 +120,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
         return fallback
     }
 
-    override fun videoUrlParse(response: Response): String = response.request.url.toString()
+    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException("Direct MP4 links are parsed in videoListParse")
 
     private fun mediaHeaders(response: Response): Headers {
         val cookies = response.headers.values("Set-Cookie")
