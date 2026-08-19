@@ -1,0 +1,9 @@
+ext {
+    extName = 'Rule34Video'
+    extClass = '.Rule34Video'
+    extVersionCode = 15
+    isNsfw = true
+}
+apply from: "$rootDir/common.gradle"
+
+// This module is a clean Kotlin implementation; it does not reuse the old APK.

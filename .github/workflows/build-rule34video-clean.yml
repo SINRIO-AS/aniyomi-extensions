@@ -1,0 +1,73 @@
+name: Build clean Rule34Video extension
+
+on:
+  push:
+    branches:
+      - rule34video-clean
+      - master
+    paths:
+      - 'src/en/rule34video/**'
+      - 'signing/rule34video-clean.keystore'
+      - '.github/workflows/build-rule34video-clean.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Rule34Video extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build clean module
+        run: ./gradlew :src:en:rule34video:assembleDebug --no-daemon --stacktrace
+
+      - name: Locate and sign APK with stable project key
+        shell: bash
+        run: |
+          set -euo pipefail
+          unsigned=$(find src/en/rule34video/build/outputs/apk -type f -name '*.apk' | head -1)
+          test -n "$unsigned"
+          mkdir -p dist
+          zipalign=$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -1)
+          apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          "$zipalign" -f 4 "$unsigned" dist/Rule34Video-clean-aligned.apk
+          "$apksigner" sign \
+            --ks signing/rule34video-clean.keystore \
+            --ks-pass pass:android \
+            --ks-key-alias rule34video-clean \
+            --key-pass pass:android \
+            --out dist/aniyomi-en.rule34video-v14.15.apk \
+            dist/Rule34Video-clean-aligned.apk
+          "$apksigner" verify --verbose --print-certs dist/aniyomi-en.rule34video-v14.15.apk
+
+      - name: Verify extension identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/aniyomi-en.rule34video-v14.15.apk
+          unzip -tq dist/aniyomi-en.rule34video-v14.15.apk
+          sha256sum dist/aniyomi-en.rule34video-v14.15.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aniyomi-en-rule34video-clean-v14.15
+          path: dist/aniyomi-en.rule34video-v14.15.apk
+          if-no-files-found: error
+          retention-days: 30
