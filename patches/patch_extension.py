@@ -146,9 +146,17 @@ new_request = r'''.method public getAnimeDetails(Leu/kanade/tachiyomi/animesourc
     move-result-object v1
     invoke-interface {v1}, Lokhttp3/Call;->execute()Lokhttp3/Response;
     move-result-object v1
-    invoke-direct {p0, v1}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->sessionCookies(Lokhttp3/Response;)Ljava/lang/String;
-    move-result-object v2
+    invoke-virtual {v1}, Lokhttp3/Response;->isSuccessful()Z
+    move-result v3
+    if-eqz v3, :popup_failed
+    invoke-direct {p0, v1, p1}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->parseDetails(Lokhttp3/Response;Leu/kanade/tachiyomi/animesource/model/SAnime;)Leu/kanade/tachiyomi/animesource/model/SAnime;
+    move-result-object v3
     invoke-virtual {v1}, Lokhttp3/Response;->close()V
+    return-object v3
+
+    :popup_failed
+    invoke-virtual {v1}, Lokhttp3/Response;->close()V
+    const/4 v2, 0x0
 
     invoke-virtual {p0}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->getClient()Lokhttp3/OkHttpClient;
     move-result-object v1

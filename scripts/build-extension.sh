@@ -25,11 +25,10 @@ ZIPALIGN="$(find "$BUILD_TOOLS" -type f -name zipalign | sort -V | tail -1)"
 APKSIGNER="$(find "$BUILD_TOOLS" -type f -name apksigner | sort -V | tail -1)"
 [[ -x "$ZIPALIGN" && -x "$APKSIGNER" ]] || { echo 'Android build tools not found'; exit 1; }
 
-keytool -genkeypair -v -keystore "$WORK/debug.keystore" -storepass android -alias androiddebugkey \
-  -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-  -dname 'CN=Android Debug,O=Android,C=US'
+KEYSTORE="$ROOT/signing/rule34video-release.keystore"
+test -f "$KEYSTORE"
 "$ZIPALIGN" -f 4 "$OUT/Rule34Video-v14.14-fixed-unsigned.apk" "$OUT/Rule34Video-v14.14-fixed-aligned.apk"
-"$APKSIGNER" sign --ks "$WORK/debug.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey \
+"$APKSIGNER" sign --ks "$KEYSTORE" --ks-pass pass:android --ks-key-alias rule34video \
   --key-pass pass:android --out "$OUT/Rule34Video-v14.14-fixed.apk" "$OUT/Rule34Video-v14.14-fixed-aligned.apk"
 "$APKSIGNER" verify --verbose "$OUT/Rule34Video-v14.14-fixed.apk"
 sha256sum "$OUT/Rule34Video-v14.14-fixed.apk"
