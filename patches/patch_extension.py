@@ -134,9 +134,9 @@ new_request = r'''.method public getAnimeDetails(Leu/kanade/tachiyomi/animesourc
     # Warm up the site and collect the PHP/DDoS-Guard cookies before detail request.
     invoke-virtual {p0}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->getClient()Lokhttp3/OkHttpClient;
     move-result-object v1
-    invoke-virtual {p0}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->getBaseUrl()Ljava/lang/String;
+    invoke-direct {p0, v0}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->popupUrl(Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
-    invoke-direct {p0, v2}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->pageHeaders(Ljava/lang/String;)Lokhttp3/Headers;
+    invoke-direct {p0, v0}, Leu/kanade/tachiyomi/animeextension/en/rule34video/Rule34Video;->pageHeaders(Ljava/lang/String;)Lokhttp3/Headers;
     move-result-object v3
     const/4 v4, 0x0
     const/4 v5, 0x4
