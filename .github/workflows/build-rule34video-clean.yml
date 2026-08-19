@@ -14,6 +14,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CI_CHUNK_SIZE: 65
+
 jobs:
   build:
     name: Build Rule34Video extension
