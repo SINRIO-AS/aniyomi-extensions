@@ -128,6 +128,8 @@ class Rule34Video : ParsedAnimeHttpSource() {
         return fallback
     }
 
+    override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException("Direct MP4 links are parsed in videoListParse")
+
     override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException("Direct MP4 links are parsed in videoListParse")
 
     private fun mediaHeaders(response: Response): Headers {
