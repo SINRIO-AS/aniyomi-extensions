@@ -76,9 +76,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
         return GET(popup, sourceHeaders.newBuilder().set("Referer", anime.url.toAbsoluteUrl()).build())
     }
 
-    override fun animeDetailsParse(response: Response): SAnime {
-        return parseDetails(response.asJsoup(), response.request.url.toString())
-    }
+    override fun animeDetailsParse(document: Document): SAnime = parseDetails(document)
 
     override fun episodeListParse(response: Response): List<SEpisode> {
         val document = response.asJsoup()
@@ -136,7 +134,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
             .build()
     }
 
-    private fun parseDetails(document: Document, requestedUrl: String): SAnime = SAnime.create().apply {
+    private fun parseDetails(document: Document): SAnime = SAnime.create().apply {
         val title = document.selectFirst("h1.title_video, h1")?.text()?.trim().orEmpty()
         this.title = title
         thumbnail_url = document.selectFirst("meta[property='og:image']")?.attr("content")?.toAbsoluteUrl()
@@ -151,7 +149,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
         val uploaders = document.select("a[href*='/members/']").eachText().cleanNames()
         val tags = document.select("a.tag_item[href*='/tags/']").eachText().cleanNames()
         val freeDescription = document.selectFirst("#tab_video_info > .row .label em")?.wholeText()?.trim().orEmpty()
-        val originalPage = document.selectFirst("a[href*='/video/']")?.absUrl("href").orEmpty().ifBlank { requestedUrl }
+        val originalPage = document.selectFirst("a[href*='/video/']")?.absUrl("href").orEmpty().ifBlank { document.baseUri() }
         val downloadQualities = document.select("a.tag_item.tag_item_download[href*='/get_file/']")
             .eachText().cleanNames()
 
@@ -191,7 +189,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
     }
 
     private fun listUrl(page: Int, sortBy: String, sortDir: String): String {
-        val params = filterParameters(emptyList()).toMutableMap()
+        val params = linkedMapOf<String, String>()
         params["sort_by"] = sortBy
         params["sort_dir"] = sortDir
         if (page > 1) params["page"] = page.toString()
