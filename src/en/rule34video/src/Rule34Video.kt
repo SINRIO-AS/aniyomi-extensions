@@ -78,6 +78,14 @@ class Rule34Video : ParsedAnimeHttpSource() {
 
     override fun animeDetailsParse(document: Document): SAnime = parseDetails(document)
 
+    override fun episodeListSelector(): String = ""
+
+    override fun episodeFromElement(element: Element): SEpisode = SEpisode.create().apply {
+        setUrlWithoutDomain(element.selectFirst("a")?.absUrl("href").orEmpty())
+        name = element.text().trim().ifBlank { "Video" }
+        episode_number = 1f
+    }
+
     override fun episodeListParse(response: Response): List<SEpisode> {
         val document = response.asJsoup()
         val pageUrl = response.request.url.toString()
