@@ -105,7 +105,7 @@ class Rule34Video : ParsedAnimeHttpSource() {
                 val url = element.absUrl("href").ifBlank { element.attr("href").toAbsoluteUrl() }
                 if (url.isBlank()) return@mapNotNull null
                 val quality = element.text().trim().ifBlank { qualityFromUrl(url) }
-                Video(url, quality, url, sourceHeaders)
+                Video(url, quality, url, mediaHeaders(response))
             }
             .distinctBy { it.videoUrl }
 
@@ -116,13 +116,25 @@ class Rule34Video : ParsedAnimeHttpSource() {
                 val url = element.absUrl("src").ifBlank {
                     element.absUrl("href").ifBlank { element.attr("src").toAbsoluteUrl() }
                 }
-                url.takeIf { it.isNotBlank() }?.let { Video(it, qualityFromUrl(it), it, sourceHeaders) }
+                url.takeIf { it.isNotBlank() }?.let { Video(it, qualityFromUrl(it), it, mediaHeaders(response)) }
             }
             .distinctBy { it.videoUrl }
         return fallback
     }
 
     override fun videoUrlParse(response: Response): String = response.request.url.toString()
+
+    private fun mediaHeaders(response: Response): Headers {
+        val cookies = response.headers.values("Set-Cookie")
+            .map { it.substringBefore(';').trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .joinToString("; ")
+        return sourceHeaders.newBuilder()
+            .set("Referer", response.request.url.toString())
+            .apply { if (cookies.isNotBlank()) set("Cookie", cookies) }
+            .build()
+    }
 
     private fun parseDetails(document: Document, requestedUrl: String): SAnime = SAnime.create().apply {
         val title = document.selectFirst("h1.title_video, h1")?.text()?.trim().orEmpty()
