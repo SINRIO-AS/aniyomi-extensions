@@ -7,6 +7,7 @@ on:
       - master
     paths:
       - 'src/en/rule34video/**'
+      - 'gradle/libs.versions.toml'
       - 'signing/rule34video-clean.keystore'
       - '.github/workflows/build-rule34video-clean.yml'
   workflow_dispatch:
