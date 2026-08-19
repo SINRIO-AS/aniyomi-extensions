@@ -35,8 +35,8 @@ jobs:
 
       - name: Verify extension identity
         run: |
-          unzip -p dist/Rule34Video-v14.12-fixed.apk AndroidManifest.xml >/dev/null
-          test -f dist/Rule34Video-v14.12-fixed.apk
+          unzip -p dist/Rule34Video-v14.14-fixed.apk AndroidManifest.xml >/dev/null
+          test -f dist/Rule34Video-v14.14-fixed.apk
 
       - name: Upload Aniyomi extension APK
         uses: actions/upload-artifact@v4
