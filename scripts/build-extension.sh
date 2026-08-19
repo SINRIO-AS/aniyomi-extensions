@@ -13,6 +13,8 @@ mkdir -p "$WORK" "$OUT"
 
 curl -fL --retry 3 -o "$APKTOOL" "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar"
 java -jar "$APKTOOL" d -f -o "$WORK/decoded" "$INPUT"
+# Bump the extension version so Aniyomi cannot keep the previously installed v14.12 APK.
+sed -i 's/^  versionCode: 12$/  versionCode: 13/; s/^  versionName: 14.12$/  versionName: 14.13/' "$WORK/decoded/apktool.yml"
 python3 "$ROOT/patches/patch_extension.py" "$WORK/decoded"
 java -jar "$APKTOOL" b "$WORK/decoded" -o "$OUT/Rule34Video-v14.12-fixed-unsigned.apk"
 
